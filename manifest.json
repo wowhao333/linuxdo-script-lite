@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Linux DO Assistant",
+  "version": "1.0.0",
+  "description": "Helper script for Linux DO forum",
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://linux.do/*"
+      ],
+      "js": [
+        "src/main_world.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://linux.do/*"
+      ],
+      "js": [
+        "src/isolated.js"
+      ],
+      "world": "ISOLATED",
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://raw.githubusercontent.com/*"
+  ]
+}
