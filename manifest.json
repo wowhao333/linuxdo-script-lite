@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Linux DO Assistant",
+  "name": "Linux DO Script Lite",
   "version": "1.0.0",
-  "description": "Helper script for Linux DO forum",
+  "description": "Linux DO 论坛助手轻量脚本 (Chrome Extension)。 旨在仅实现必要功能，提供轻量插件。目前主要功能是帮助用户同步和管理屏蔽列表，支持从远程配置自动同步忽略用户。",
   "background": {
     "service_worker": "src/background.js"
   },
