@@ -8,6 +8,7 @@
 const STATE = {
   configUrl: "https://raw.githubusercontent.com/wowhao333/linuxdo-config/refs/heads/main/user-blocklist.conf", // Default configuration URL
   syncMode: "merge", // Synchronization mode: "merge" (additive) or "overwrite" (replace all)
+  autoScrollToMain: true, // Auto-redirect to main post
   isSyncing: false
 };
 
@@ -17,9 +18,10 @@ const STATE = {
  */
 async function loadSettings() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(["linuxdo_configUrl", "linuxdo_syncMode"], (result) => {
+    chrome.storage.local.get(["linuxdo_configUrl", "linuxdo_syncMode", "linuxdo_autoScrollToMain"], (result) => {
       if (result.linuxdo_configUrl) STATE.configUrl = result.linuxdo_configUrl;
       if (result.linuxdo_syncMode) STATE.syncMode = result.linuxdo_syncMode;
+      if (result.linuxdo_autoScrollToMain !== undefined) STATE.autoScrollToMain = result.linuxdo_autoScrollToMain;
       resolve();
     });
   });
@@ -33,7 +35,8 @@ async function saveSettings() {
   return new Promise((resolve) => {
     chrome.storage.local.set({
       "linuxdo_configUrl": STATE.configUrl,
-      "linuxdo_syncMode": STATE.syncMode
+      "linuxdo_syncMode": STATE.syncMode,
+      "linuxdo_autoScrollToMain": STATE.autoScrollToMain
     }, resolve);
   });
 }
@@ -63,6 +66,14 @@ function sendToMain(action, payload) {
   });
 }
 
+// Listen for URL changes from Main World (Immediate reaction)
+window.addEventListener("message", (event) => {
+  if (event.source !== window) return;
+  if (event.data.type === "LINUXDO_URL_CHANGE") {
+    checkAndRedirect();
+  }
+});
+
 /**
  * Fetches the configuration file via the Background script.
  * 
@@ -83,6 +94,59 @@ function fetchConfig(url) {
 }
 
 // --- Logic ---
+
+/**
+ * Checks current URL and redirects to main post if needed.
+ * Logic:
+ * 1. Must be enabled in settings.
+ * 2. Must be a topic URL with post ID > 1.
+ * 3. Must be a NEW entry (different topic ID than before), to avoid interrupting scrolling.
+ */
+let lastTopicId = null;
+
+function checkAndRedirect() {
+  if (!STATE.autoScrollToMain) return;
+
+  const url = window.location.href;
+  // Regex: https://linux.do/t/[slug]/[topic_id]/[post_id]
+  // Note: Handle optional slug or structure variations if needed, but standard is /t/topic/123/456
+  const match = url.match(/\/t\/[^/]+\/(\d+)\/(\d+)/);
+
+  if (match) {
+    const topicId = match[1];
+    const postId = parseInt(match[2], 10);
+
+    // If it's the first time seeing this topic (Entry) AND we are not at post 1
+    if (topicId !== lastTopicId) {
+      lastTopicId = topicId; // Update tracking
+
+      if (postId > 1) {
+        const newUrl = url.replace(/\/\d+$/, "/1");
+        log(`Redirecting to main post: ${newUrl}`);
+        sendToMain("navigateTo", { url: newUrl });
+      }
+    }
+  } else {
+    // Not a topic page (or main post without ID), reset tracker
+    // Check if it's a topic page without post ID (e.g. /t/slug/123) -> that implies post 1, so update tracker
+    const matchTopicOnly = url.match(/\/t\/[^/]+\/(\d+)/);
+    if (matchTopicOnly) {
+        lastTopicId = matchTopicOnly[1];
+    } else {
+        lastTopicId = null;
+    }
+  }
+}
+
+// Monitor URL changes
+let lastUrl = window.location.href;
+setInterval(() => {
+  const currentUrl = window.location.href;
+  if (currentUrl !== lastUrl) {
+    lastUrl = currentUrl;
+    checkAndRedirect();
+  }
+}, 500);
 
 /**
  * Parses the raw configuration text into a list of usernames.
@@ -185,8 +249,8 @@ function createUI() {
   `;
 
   const header = document.createElement('div');
-  header.textContent = "🛡️ Blocklist Sync";
-  header.style.cssText = "font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between;";
+  header.textContent = "Linux DO Script Lite";
+  header.style.cssText = "font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding-bottom: 10px;";
   
   const closeBtn = document.createElement('span');
   closeBtn.textContent = "✖";
@@ -196,14 +260,22 @@ function createUI() {
   
   container.appendChild(header);
 
+  // --- Section 1: Blocklist Sync ---
+  const syncSection = document.createElement('fieldset');
+  syncSection.style.cssText = "border: 1px solid #444; margin-bottom: 15px; padding: 10px; border-radius: 4px;";
+  const syncLegend = document.createElement('legend');
+  syncLegend.textContent = "Blocklist Sync";
+  syncLegend.style.cssText = "padding: 0 5px; color: #ccc; font-size: 0.9em;";
+  syncSection.appendChild(syncLegend);
+
   // Config URL Input
   const urlInput = document.createElement('input');
   urlInput.type = 'text';
   urlInput.placeholder = 'GitHub Raw URL...';
   urlInput.value = STATE.configUrl;
-  urlInput.style.cssText = "width: 100%; margin-bottom: 10px; padding: 5px; background: #333; color: white; border: 1px solid #555;";
+  urlInput.style.cssText = "width: 100%; margin-bottom: 10px; padding: 5px; background: #333; color: white; border: 1px solid #555; box-sizing: border-box;";
   urlInput.onchange = (e) => { STATE.configUrl = e.target.value; saveSettings(); };
-  container.appendChild(urlInput);
+  syncSection.appendChild(urlInput);
 
   // Mode Selection
   const modeContainer = document.createElement('div');
@@ -232,7 +304,7 @@ function createUI() {
 
   modeContainer.appendChild(label1);
   modeContainer.appendChild(label2);
-  container.appendChild(modeContainer);
+  syncSection.appendChild(modeContainer);
 
   // Sync Button
   const syncBtn = document.createElement('button');
@@ -240,12 +312,41 @@ function createUI() {
   syncBtn.textContent = "Sync Now";
   syncBtn.style.cssText = "width: 100%; padding: 8px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px;";
   syncBtn.onclick = performSync;
-  container.appendChild(syncBtn);
+  syncSection.appendChild(syncBtn);
 
   // Log Area
   logArea = document.createElement('div');
-  logArea.style.cssText = "margin-top: 10px; font-size: 12px; color: #aaa; max-height: 100px; overflow-y: auto;";
-  container.appendChild(logArea);
+  logArea.textContent = "// Log output area";
+  logArea.style.cssText = "margin: 10px -10px -10px -10px; font-size: 12px; color: #aaa; max-height: 80px; overflow-y: auto; background: #111; padding: 5px 10px; border-top: 1px solid #444;";
+  syncSection.appendChild(logArea);
+
+  container.appendChild(syncSection);
+
+  // --- Section 2: Feature ---
+  const featureSection = document.createElement('fieldset');
+  featureSection.style.cssText = "border: 1px solid #444; margin-bottom: 0px; padding: 10px; border-radius: 4px;";
+  const featureLegend = document.createElement('legend');
+  featureLegend.textContent = "Feature";
+  featureLegend.style.cssText = "padding: 0 5px; color: #ccc; font-size: 0.9em;";
+  featureSection.appendChild(featureLegend);
+
+  const labelScroll = document.createElement('label');
+  labelScroll.style.cssText = "display: flex; align-items: center; cursor: pointer;";
+  
+  const checkScroll = document.createElement('input');
+  checkScroll.type = "checkbox";
+  checkScroll.checked = STATE.autoScrollToMain;
+  checkScroll.style.marginRight = "8px";
+  checkScroll.onchange = (e) => { 
+    STATE.autoScrollToMain = e.target.checked; 
+    saveSettings(); 
+  };
+
+  labelScroll.appendChild(checkScroll);
+  labelScroll.appendChild(document.createTextNode("Auto-redirect to Main Post"));
+  featureSection.appendChild(labelScroll);
+
+  container.appendChild(featureSection);
 
   document.body.appendChild(container);
   panel = container;
@@ -296,4 +397,6 @@ function log(msg) {
 // --- Init ---
 loadSettings().then(() => {
   createUI();
+  // Initial check on load
+  checkAndRedirect();
 });

@@ -177,6 +177,29 @@ window.__linuxDoIgnoreUser = {
   }
 };
 
+// --- Navigation Observer ---
+function setupNavigationObserver() {
+    // Hook History API
+    const wrapHistory = (type) => {
+        const original = history[type];
+        return function (...args) {
+            const result = original.apply(this, args);
+            window.postMessage({ type: "LINUXDO_URL_CHANGE", url: window.location.href }, "*");
+            return result;
+        };
+    };
+
+    history.pushState = wrapHistory("pushState");
+    history.replaceState = wrapHistory("replaceState");
+
+    // Listen for popstate (Back/Forward)
+    window.addEventListener("popstate", () => {
+        window.postMessage({ type: "LINUXDO_URL_CHANGE", url: window.location.href }, "*");
+    });
+}
+
+setupNavigationObserver();
+
 window.addEventListener("message", async (event) => {
   if (event.source !== window) return;
   if (event.data.type && event.data.type === "LINUXDO_SCRIPT_COMMAND") {
@@ -197,6 +220,20 @@ window.addEventListener("message", async (event) => {
         } else if (action === "getIgnoredUsers") {
             const users = await window.__linuxDoIgnoreUser._getIgnoredUsers();
             window.postMessage({ type: "LINUXDO_SCRIPT_RESPONSE", reqId, success: true, data: users }, "*");
+        } else if (action === "navigateTo") {
+            const { url } = payload;
+            try {
+                // Try Discourse internal router first for SPA navigation
+                if (window.Discourse?.URL?.routeTo) {
+                    window.Discourse.URL.routeTo(url);
+                } else {
+                    // Fallback to standard navigation
+                    window.location.href = url;
+                }
+                window.postMessage({ type: "LINUXDO_SCRIPT_RESPONSE", reqId, success: true }, "*");
+            } catch (e) {
+                window.location.href = url; // Hard fallback
+            }
         }
     } catch (error) {
         console.error("Linux DO Script Error:", error);
