@@ -14,6 +14,12 @@ Linux DO 论坛助手脚本 (Chrome Extension)。
 本项目命名为 **Lite**，旨在保持最**精简**的代码和功能。  
 摒弃非必要的功能堆砌，以确保脚本的轻量化、安全性及易维护性。
 
+## 运行效果
+
+<p align="center">
+  <img src="assets/preview.png" alt="运行效果预览" width="500" />
+</p>
+
 ## 主要功能
 
 - **🛡️ 屏蔽列表同步**: 从指定的远程 URL (如 GitHub Raw) 拉取屏蔽列表配置。
