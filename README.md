@@ -17,7 +17,7 @@ Linux DO 论坛助手脚本 (Chrome Extension)。
 ## 运行效果
 
 <p align="center">
-  <img src="assets/preview.png" alt="运行效果预览" width="500" />
+  <img src="assets/preview.png" alt="运行效果预览" width="600" />
 </p>
 
 ## 主要功能
@@ -43,9 +43,8 @@ Linux DO 论坛助手脚本 (Chrome Extension)。
 2. 页面右下角会出现一个 **🛡️ 盾牌图标**。
 3. 点击图标打开设置面板：
    - **Config URL**: 输入包含用户名的文本文件 URL (每行一个用户名，支持 `#` 注释)。
-     - 默认示例: `https://raw.githubusercontent.com/wowhao333/linuxdo-config/refs/heads/main/user-blocklist.conf`
+     - 默认示例: https://raw.githubusercontent.com/wowhao333/linuxdo-config/main/user-blocklist.conf
    - **Sync Mode**: 选择同步模式 (Merge 或 Overwrite)。
-     > ⚠️ **警告**: 当前请勿使用 **Overwrite** 模式。该功能尚未完全验证，可能导致意外取消屏蔽现有用户。
    - **Sync Now**: 点击按钮开始同步。
 4. 下方的日志区域会显示同步进度和结果。
 

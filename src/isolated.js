@@ -6,7 +6,7 @@
 
 // --- State Management ---
 const STATE = {
-  configUrl: "https://raw.githubusercontent.com/wowhao333/linuxdo-config/refs/heads/main/user-blocklist.conf", // Default configuration URL
+  configUrl: "https://raw.githubusercontent.com/wowhao333/linuxdo-config/main/user-blocklist.conf", // Default configuration URL
   syncMode: "merge", // Synchronization mode: "merge" (additive) or "overwrite" (replace all)
   autoScrollToMain: true, // Auto-redirect to main post
   isSyncing: false
