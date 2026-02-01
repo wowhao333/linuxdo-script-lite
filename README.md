@@ -1,7 +1,7 @@
 # Linux DO Script Lite
 
 Linux DO 论坛助手脚本 (Chrome Extension)。  
-主要功能是帮助用户同步和管理屏蔽列表 (Blocklist)，支持从远程配置自动同步忽略用户。
+主要功能是帮助用户同步和管理屏蔽列表 (Blocklist)，以及优化浏览体验。
 
 > ⚠️ **免责声明**
 > 
@@ -22,12 +22,17 @@ Linux DO 论坛助手脚本 (Chrome Extension)。
 
 ## 主要功能
 
-- **🛡️ 屏蔽列表同步**: 从指定的远程 URL (如 GitHub Raw) 拉取屏蔽列表配置。
-- **🔄 双向同步模式**:
+### 🛡️ 屏蔽列表同步 (Blocklist Sync)
+- **远程同步**: 从指定的远程 URL (如 GitHub Raw) 拉取屏蔽列表配置。
+- **双向同步模式**:
   - **Merge (合并模式)**: 仅添加远程列表中新增的用户，保留本地已屏蔽的用户。
   - **Overwrite (覆盖模式)**: 强制与远程列表保持一致 (会取消屏蔽不在远程列表中的用户)。
-- **UI 配置界面**: 页面右下角悬浮窗，方便随时调整配置和手动触发同步。
 - **Discourse API 集成**: 直接调用论坛接口，无需手动刷新页面即可生效。
+
+### 🚀 浏览体验优化 (Features)
+- **自动定位到主贴**: 
+  - 进入帖子时，自动重定向到主楼 (第一条帖子)，避免 Discourse 默认跳转到上次阅读位置或最新回复。
+  - **智能判定**: 仅在首次进入或切换帖子时触发，不会干扰正常的页面内滚动。
 
 ## 安装指南
 
@@ -42,11 +47,14 @@ Linux DO 论坛助手脚本 (Chrome Extension)。
 1. 扩展加载成功后，刷新 Linux DO 论坛页面。
 2. 页面右下角会出现一个 **🛡️ 盾牌图标**。
 3. 点击图标打开设置面板：
-   - **Config URL**: 输入包含用户名的文本文件 URL (每行一个用户名，支持 `#` 注释)。
-     - 默认示例: https://raw.githubusercontent.com/wowhao333/linuxdo-config/main/user-blocklist.conf
-   - **Sync Mode**: 选择同步模式 (Merge 或 Overwrite)。
-   - **Sync Now**: 点击按钮开始同步。
-4. 下方的日志区域会显示同步进度和结果。
+   - **Blocklist Sync**:
+     - **Config URL**: 输入包含用户名的文本文件 URL (每行一个用户名，支持 `#` 注释)。
+       - 默认示例: https://raw.githubusercontent.com/wowhao333/linuxdo-config/main/user-blocklist.conf
+     - **Sync Mode**: 选择同步模式 (Merge 或 Overwrite)。
+     - **Sync Now**: 点击按钮开始同步。
+   - **Feature**:
+     - **Auto-redirect to Main Post**: 勾选开启/关闭自动定位到主贴功能 (默认开启)。
+4. 面板底部的日志区域会显示操作反馈。
 
 ## 项目结构
 
@@ -57,11 +65,12 @@ Linux DO 论坛助手脚本 (Chrome Extension)。
   - 负责渲染 UI 界面。
   - 管理配置存储 (`chrome.storage`)。
   - 处理远程配置的 Fetch 请求 (通过 Background 转发以跨域)。
-  - 计算差异 (Diff) 并指挥 Main World 执行操作。
+  - 监听路由变化并触发重定向逻辑。
 - `src/main_world.js`: **主环境脚本**。
   - 注入到页面上下文中运行。
   - 获取 CSRF Token 和当前用户信息。
-  - 封装 Discourse API (`setIgnoreUser`) 执行实际的屏蔽/取消屏蔽操作。
+  - 封装 Discourse API (`setIgnoreUser`) 执行屏蔽操作。
+  - Hook 浏览器 History API (`pushState`, `replaceState`) 以实现极速导航监听。
 - `src/background.js`: **后台服务 Worker**。
   - 代理网络请求，解决 CORS 跨域问题。
 
