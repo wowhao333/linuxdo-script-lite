@@ -81,3 +81,7 @@ Linux DO 论坛助手脚本 (Chrome Extension)。
 ## License
 
 MIT
+
+## 隐私政策（Privacy Policy）
+
+[Privacy Policy](https://github.com/wowhao333/linuxdo-script-lite/blob/main/PRIVACY_POLICY.md)
